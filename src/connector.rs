@@ -68,8 +68,8 @@ impl RedisConnector {
     }
 
     /// 设置主机
-    pub fn host(mut self, host: &str) -> Self {
-        self.host = host.to_string();
+    pub fn host(mut self, host: String) -> Self {
+        self.host = host;
         self
     }
 
@@ -80,8 +80,8 @@ impl RedisConnector {
     }
 
     /// 设置密码
-    pub fn password(mut self, password: &str) -> Self {
-        self.password = password.to_string();
+    pub fn password(mut self, password: String) -> Self {
+        self.password = password;
         self
     }
 

@@ -4,29 +4,9 @@ use redis::{AsyncCommands, FromRedisValue, ToRedisArgs};
 use serde::{Deserialize, Serialize};
 
 /// Redis 工具类 - 提供常用的异步 Redis 操作方法
-pub struct RedisUtils {
-    manager: ConnectionManager,
-}
+pub struct RedisUtils;
 
 impl RedisUtils {
-    /// 创建新的 Redis 工具实例
-    ///
-    /// # Arguments
-    ///
-    /// * `manager` - Redis 连接管理器
-    ///
-    /// # Returns
-    ///
-    /// 返回 RedisUtils 实例
-    pub fn new(manager: ConnectionManager) -> Self {
-        Self { manager }
-    }
-
-    /// 获取连接管理器的可变引用
-    fn get_connection(&mut self) -> &mut ConnectionManager {
-        &mut self.manager
-    }
-
     // ==================== 字符串操作 ====================
 
     /// 设置字符串值
@@ -39,12 +19,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回操作结果
-    pub async fn set<K, V>(&mut self, key: K, value: V) -> Result<()>
+    pub async fn set<K, V>(conn: &mut ConnectionManager, key: K, value: V) -> Result<()>
     where
         K: ToRedisArgs + Send + Sync,
         V: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let _: () = conn.set(key, value).await?;
         Ok(())
     }
@@ -60,12 +39,16 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回操作结果
-    pub async fn setex<K, V>(&mut self, key: K, value: V, seconds: usize) -> Result<()>
+    pub async fn setex<K, V>(
+        conn: &mut ConnectionManager,
+        key: K,
+        value: V,
+        seconds: usize,
+    ) -> Result<()>
     where
         K: ToRedisArgs + Send + Sync,
         V: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let _: () = conn.set_ex(key, value, seconds as u64).await?;
         Ok(())
     }
@@ -79,12 +62,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回值或 None
-    pub async fn get<K, V>(&mut self, key: K) -> Result<Option<V>>
+    pub async fn get<K, V>(conn: &mut ConnectionManager, key: K) -> Result<Option<V>>
     where
         K: ToRedisArgs + Send + Sync,
         V: FromRedisValue,
     {
-        let conn = self.get_connection();
         let result: Option<V> = conn.get(key).await?;
         Ok(result)
     }
@@ -98,11 +80,10 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回删除的键数量
-    pub async fn del<K>(&mut self, keys: K) -> Result<i32>
+    pub async fn del<K>(conn: &mut ConnectionManager, keys: K) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.del(keys).await?;
         Ok(result)
     }
@@ -116,11 +97,10 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回是否存在
-    pub async fn exists<K>(&mut self, key: K) -> Result<bool>
+    pub async fn exists<K>(conn: &mut ConnectionManager, key: K) -> Result<bool>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: bool = conn.exists(key).await?;
         Ok(result)
     }
@@ -135,11 +115,10 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回操作结果
-    pub async fn expire<K>(&mut self, key: K, seconds: usize) -> Result<bool>
+    pub async fn expire<K>(conn: &mut ConnectionManager, key: K, seconds: usize) -> Result<bool>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: bool = conn.expire(key, seconds as i64).await?;
         Ok(result)
     }
@@ -153,11 +132,10 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回剩余秒数，-1表示永不过期，-2表示键不存在
-    pub async fn ttl<K>(&mut self, key: K) -> Result<i32>
+    pub async fn ttl<K>(conn: &mut ConnectionManager, key: K) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.ttl(key).await?;
         Ok(result)
     }
@@ -175,13 +153,17 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回操作结果
-    pub async fn hset<K, F, V>(&mut self, key: K, field: F, value: V) -> Result<bool>
+    pub async fn hset<K, F, V>(
+        conn: &mut ConnectionManager,
+        key: K,
+        field: F,
+        value: V,
+    ) -> Result<bool>
     where
         K: ToRedisArgs + Send + Sync,
         F: ToRedisArgs + Send + Sync,
         V: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: bool = conn.hset(key, field, value).await?;
         Ok(result)
     }
@@ -196,13 +178,12 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回字段值或 None
-    pub async fn hget<K, F, V>(&mut self, key: K, field: F) -> Result<Option<V>>
+    pub async fn hget<K, F, V>(conn: &mut ConnectionManager, key: K, field: F) -> Result<Option<V>>
     where
         K: ToRedisArgs + Send + Sync,
         F: ToRedisArgs + Send + Sync,
         V: FromRedisValue,
     {
-        let conn = self.get_connection();
         let result: Option<V> = conn.hget(key, field).await?;
         Ok(result)
     }
@@ -216,11 +197,13 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回字段值映射
-    pub async fn hgetall<K>(&mut self, key: K) -> Result<std::collections::HashMap<String, String>>
+    pub async fn hgetall<K>(
+        conn: &mut ConnectionManager,
+        key: K,
+    ) -> Result<std::collections::HashMap<String, String>>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: std::collections::HashMap<String, String> = conn.hgetall(key).await?;
         Ok(result)
     }
@@ -235,12 +218,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回删除的字段数量
-    pub async fn hdel<K, F>(&mut self, key: K, fields: F) -> Result<i32>
+    pub async fn hdel<K, F>(conn: &mut ConnectionManager, key: K, fields: F) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
         F: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.hdel(key, fields).await?;
         Ok(result)
     }
@@ -255,12 +237,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回是否存在
-    pub async fn hexists<K, F>(&mut self, key: K, field: F) -> Result<bool>
+    pub async fn hexists<K, F>(conn: &mut ConnectionManager, key: K, field: F) -> Result<bool>
     where
         K: ToRedisArgs + Send + Sync,
         F: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: bool = conn.hexists(key, field).await?;
         Ok(result)
     }
@@ -277,12 +258,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回列表长度
-    pub async fn lpush<K, V>(&mut self, key: K, values: V) -> Result<i32>
+    pub async fn lpush<K, V>(conn: &mut ConnectionManager, key: K, values: V) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
         V: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.lpush(key, values).await?;
         Ok(result)
     }
@@ -297,12 +277,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回列表长度
-    pub async fn rpush<K, V>(&mut self, key: K, values: V) -> Result<i32>
+    pub async fn rpush<K, V>(conn: &mut ConnectionManager, key: K, values: V) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
         V: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.rpush(key, values).await?;
         Ok(result)
     }
@@ -316,12 +295,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回弹出的元素或 None
-    pub async fn lpop<K, V>(&mut self, key: K) -> Result<Option<V>>
+    pub async fn lpop<K, V>(conn: &mut ConnectionManager, key: K) -> Result<Option<V>>
     where
         K: ToRedisArgs + Send + Sync,
         V: FromRedisValue,
     {
-        let conn = self.get_connection();
         let result: Option<V> = conn.lpop(key, None).await?;
         Ok(result)
     }
@@ -335,12 +313,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回弹出的元素或 None
-    pub async fn rpop<K, V>(&mut self, key: K) -> Result<Option<V>>
+    pub async fn rpop<K, V>(conn: &mut ConnectionManager, key: K) -> Result<Option<V>>
     where
         K: ToRedisArgs + Send + Sync,
         V: FromRedisValue,
     {
-        let conn = self.get_connection();
         let result: Option<V> = conn.rpop(key, None).await?;
         Ok(result)
     }
@@ -354,11 +331,10 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回列表长度
-    pub async fn llen<K>(&mut self, key: K) -> Result<i32>
+    pub async fn llen<K>(conn: &mut ConnectionManager, key: K) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.llen(key).await?;
         Ok(result)
     }
@@ -374,11 +350,15 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回元素列表
-    pub async fn lrange<K>(&mut self, key: K, start: isize, stop: isize) -> Result<Vec<String>>
+    pub async fn lrange<K>(
+        conn: &mut ConnectionManager,
+        key: K,
+        start: isize,
+        stop: isize,
+    ) -> Result<Vec<String>>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: Vec<String> = conn.lrange(key, start, stop).await?;
         Ok(result)
     }
@@ -395,12 +375,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回添加的成员数量
-    pub async fn sadd<K, M>(&mut self, key: K, members: M) -> Result<i32>
+    pub async fn sadd<K, M>(conn: &mut ConnectionManager, key: K, members: M) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
         M: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.sadd(key, members).await?;
         Ok(result)
     }
@@ -415,12 +394,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回移除的成员数量
-    pub async fn srem<K, M>(&mut self, key: K, members: M) -> Result<i32>
+    pub async fn srem<K, M>(conn: &mut ConnectionManager, key: K, members: M) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
         M: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.srem(key, members).await?;
         Ok(result)
     }
@@ -435,12 +413,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回是否存在
-    pub async fn sismember<K, M>(&mut self, key: K, member: M) -> Result<bool>
+    pub async fn sismember<K, M>(conn: &mut ConnectionManager, key: K, member: M) -> Result<bool>
     where
         K: ToRedisArgs + Send + Sync,
         M: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: bool = conn.sismember(key, member).await?;
         Ok(result)
     }
@@ -454,11 +431,10 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回成员列表
-    pub async fn smembers<K>(&mut self, key: K) -> Result<Vec<String>>
+    pub async fn smembers<K>(conn: &mut ConnectionManager, key: K) -> Result<Vec<String>>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: Vec<String> = conn.smembers(key).await?;
         Ok(result)
     }
@@ -472,11 +448,10 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回成员数量
-    pub async fn scard<K>(&mut self, key: K) -> Result<i32>
+    pub async fn scard<K>(conn: &mut ConnectionManager, key: K) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.scard(key).await?;
         Ok(result)
     }
@@ -494,13 +469,17 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回添加的成员数量
-    pub async fn zadd<K, S, M>(&mut self, key: K, score: S, member: M) -> Result<i32>
+    pub async fn zadd<K, S, M>(
+        conn: &mut ConnectionManager,
+        key: K,
+        score: S,
+        member: M,
+    ) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
         S: ToRedisArgs + Send + Sync,
         M: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.zadd(key, member, score).await?;
         Ok(result)
     }
@@ -515,12 +494,11 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回移除的成员数量
-    pub async fn zrem<K, M>(&mut self, key: K, members: M) -> Result<i32>
+    pub async fn zrem<K, M>(conn: &mut ConnectionManager, key: K, members: M) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
         M: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.zrem(key, members).await?;
         Ok(result)
     }
@@ -536,11 +514,15 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回成员列表
-    pub async fn zrange<K>(&mut self, key: K, start: isize, stop: isize) -> Result<Vec<String>>
+    pub async fn zrange<K>(
+        conn: &mut ConnectionManager,
+        key: K,
+        start: isize,
+        stop: isize,
+    ) -> Result<Vec<String>>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: Vec<String> = conn.zrange(key, start, stop).await?;
         Ok(result)
     }
@@ -554,11 +536,10 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回成员数量
-    pub async fn zcard<K>(&mut self, key: K) -> Result<i32>
+    pub async fn zcard<K>(conn: &mut ConnectionManager, key: K) -> Result<i32>
     where
         K: ToRedisArgs + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: i32 = conn.zcard(key).await?;
         Ok(result)
     }
@@ -575,14 +556,14 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回操作结果
-    pub async fn set_json<K, V>(&mut self, key: K, value: &V) -> Result<()>
+    pub async fn set_json<K, V>(conn: &mut ConnectionManager, key: K, value: &V) -> Result<()>
     where
         K: ToRedisArgs + Send + Sync,
         V: Serialize,
     {
         let json_str = serde_json::to_string(value)
             .map_err(|e| ConnectionError::Serialization(e.to_string()))?;
-        self.set(key, json_str).await
+        Self::set(conn, key, json_str).await
     }
 
     /// 获取 JSON 对象
@@ -594,12 +575,12 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回反序列化的对象或 None
-    pub async fn get_json<K, V>(&mut self, key: K) -> Result<Option<V>>
+    pub async fn get_json<K, V>(conn: &mut ConnectionManager, key: K) -> Result<Option<V>>
     where
         K: ToRedisArgs + Send + Sync,
         V: for<'de> Deserialize<'de>,
     {
-        let json_str: Option<String> = self.get(key).await?;
+        let json_str: Option<String> = Self::get(conn, key).await?;
         match json_str {
             Some(s) => {
                 let value = serde_json::from_str(&s)
@@ -643,14 +624,14 @@ impl RedisUtils {
     ///
     /// utils.set_struct("user:1", &user).await?;
     /// ```
-    pub async fn set_struct<K, T>(&mut self, key: K, value: &T) -> Result<()>
+    pub async fn set_struct<K, T>(conn: &mut ConnectionManager, key: K, value: &T) -> Result<()>
     where
         K: ToRedisArgs + Send + Sync,
         T: Serialize,
     {
         let json_str = serde_json::to_string(value)
             .map_err(|e| ConnectionError::Serialization(e.to_string()))?;
-        self.set(key, json_str).await
+        Self::set(conn, key, json_str).await
     }
 
     /// 设置任意结构体对象并指定过期时间
@@ -671,14 +652,19 @@ impl RedisUtils {
     /// let user = User { /* ... */ };
     /// utils.set_struct_ex("user:1", &user, 3600).await?; // 1小时后过期
     /// ```
-    pub async fn set_struct_ex<K, T>(&mut self, key: K, value: &T, seconds: usize) -> Result<()>
+    pub async fn set_struct_ex<K, T>(
+        conn: &mut ConnectionManager,
+        key: K,
+        value: &T,
+        seconds: usize,
+    ) -> Result<()>
     where
         K: ToRedisArgs + Send + Sync,
         T: Serialize,
     {
         let json_str = serde_json::to_string(value)
             .map_err(|e| ConnectionError::Serialization(e.to_string()))?;
-        self.setex(key, json_str, seconds).await
+        Self::setex(conn, key, json_str, seconds).await
     }
 
     /// 获取任意结构体对象
@@ -700,12 +686,12 @@ impl RedisUtils {
     ///     None => println!("用户不存在"),
     /// }
     /// ```
-    pub async fn get_struct<K, T>(&mut self, key: K) -> Result<Option<T>>
+    pub async fn get_struct<K, T>(conn: &mut ConnectionManager, key: K) -> Result<Option<T>>
     where
         K: ToRedisArgs + Send + Sync,
         T: for<'de> Deserialize<'de>,
     {
-        let json_str: Option<String> = self.get(key).await?;
+        let json_str: Option<String> = Self::get(conn, key).await?;
         match json_str {
             Some(s) => {
                 let value = serde_json::from_str(&s)
@@ -725,11 +711,10 @@ impl RedisUtils {
     /// # Returns
     ///
     /// 返回值列表
-    pub async fn mget<K>(&mut self, keys: &[K]) -> Result<Vec<Option<String>>>
+    pub async fn mget<K>(conn: &mut ConnectionManager, keys: &[K]) -> Result<Vec<Option<String>>>
     where
         K: ToRedisArgs + Clone + Send + Sync,
     {
-        let conn = self.get_connection();
         let result: Vec<Option<String>> = conn.get(keys).await?;
         Ok(result)
     }
@@ -750,12 +735,15 @@ impl RedisUtils {
     /// let keys = vec!["user:1", "user:2", "user:3"];
     /// let users: Vec<Option<User>> = utils.mget_struct(&keys).await?;
     /// ```
-    pub async fn mget_struct<K, T>(&mut self, keys: &[K]) -> Result<Vec<Option<T>>>
+    pub async fn mget_struct<K, T>(
+        conn: &mut ConnectionManager,
+        keys: &[K],
+    ) -> Result<Vec<Option<T>>>
     where
         K: ToRedisArgs + Clone + Send + Sync,
         T: for<'de> Deserialize<'de>,
     {
-        let json_strings: Vec<Option<String>> = self.mget(keys).await?;
+        let json_strings: Vec<Option<String>> = Self::mget(conn, keys).await?;
         let mut results = Vec::new();
 
         for json_str in json_strings {

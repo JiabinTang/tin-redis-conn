@@ -1,0 +1,16 @@
+[package]
+name = "tin-redis-conn"
+version = "0.1.0"
+edition = "2024"
+authors = ["唐加彬 me@tangjiabin.cn"]
+description = "A feature-rich, easy-to-use Rust Redis async connection library with connection pooling, comprehensive data type support, and JSON serialization capabilities"
+license = "MIT"
+repository = "https://github.com/JiabinTang/tin-redis-conn"
+homepage = "https://github.com/JiabinTang/tin-redis-conn"
+readme = "README.md"
+
+[dependencies]
+log = "0"
+serde = "1"
+serde_json = "1"
+redis = { version = "0.32", features = ["tokio-comp", "connection-manager"] }

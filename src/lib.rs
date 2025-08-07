@@ -9,3 +9,4 @@ pub use connector::RedisConnector;
 pub use error::{ConnectionError, Result};
 pub use pool::{PoolConfig, RedisPool};
 pub use utils::RedisUtils;
+pub use redis::aio::ConnectionManager;
